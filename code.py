@@ -1,5 +1,5 @@
-#code
-new model # model.py
+
+
 import pandas as pd
 import numpy as np
 import tensorflow as tf
@@ -11,19 +11,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# Set random seed for reproducibility
+
 tf.random.set_seed(42)
 np.random.seed(42)
 
-# Load dataset locally
-csv_file = 'gandataEUROSTOXX.csv'  # Adjust path if needed, e.g., 'TBC-GAN\gandataEUROSTOXX.csv'
-csv_path = os.path.join('C:', 'Users', 'hp', csv_file)  # Full path: C:\Users\hp\gandataEUROSTOXX.csv
+csv_file = 'gandataEUROSTOXX.csv'  
+csv_path = os.path.join('C:', 'Users', 'hp', csv_file)  
 if not os.path.exists(csv_path):
     raise FileNotFoundError(f"Cannot find {csv_path}. Ensure gandataEUROSTOXX.csv is in C:\\Users\\hp")
 print(f"Loading {csv_path}")
 data = pd.read_csv(csv_path)
 
-# Preprocess data
 if 'Indexvalue' not in data.columns:
     print("Column 'Indexvalue' not found. Available columns:", data.columns)
     raise ValueError("Please specify the correct column name")
@@ -33,14 +31,12 @@ if len(values) != 2206:
 scaler = MinMaxScaler()
 values_scaled = scaler.fit_transform(values)
 
-# Create sequences
 seq_len = 24
 n_features = 1
 sequences = np.array([values_scaled[i:i+seq_len] for i in range(len(values_scaled) - seq_len + 1)])
-X = sequences  # Shape: (2183, 24, 1)
+X = sequences  
 print(f"Generated {X.shape[0]} sequences")
 
-# Model parameters
 hidden_dim = 16
 num_layers = 1
 batch_size = 128
@@ -48,7 +44,6 @@ iterations = 1000
 n_critic = 5
 n_sequences = X.shape[0]
 
-# Transformer Block
 class TransformerBlock(tf.keras.layers.Layer):
     def __init__(self, hidden_dim, num_heads=2, ff_dim=32):
         super(TransformerBlock, self).__init__()
@@ -70,7 +65,6 @@ class TransformerBlock(tf.keras.layers.Layer):
         ffn_output = self.dropout2(ffn_output, training=training)
         return self.layernorm2(out1 + ffn_output)
 
-# Generator
 def build_generator():
     inputs = tf.keras.layers.Input(shape=(seq_len, n_features))
     x = inputs
@@ -83,7 +77,6 @@ def build_generator():
     model = tf.keras.Model(inputs, x)
     return model
 
-# Discriminator
 def build_discriminator():
     inputs = tf.keras.layers.Input(shape=(seq_len, n_features))
     x = inputs
@@ -96,7 +89,6 @@ def build_discriminator():
     model = tf.keras.Model(inputs, x)
     return model
 
-# Embedder
 def build_embedder():
     inputs = tf.keras.layers.Input(shape=(seq_len, n_features))
     x = inputs
@@ -107,7 +99,6 @@ def build_embedder():
     model = tf.keras.Model(inputs, x)
     return model
 
-# Supervisor
 def build_supervisor():
     inputs = tf.keras.layers.Input(shape=(seq_len, hidden_dim))
     x = inputs
@@ -117,18 +108,15 @@ def build_supervisor():
     model = tf.keras.Model(inputs, x)
     return model
 
-# Build models
 generator = build_generator()
 discriminator = build_discriminator()
 embedder = build_embedder()
 supervisor = build_supervisor()
 
-# Optimizers
 g_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.5)
 d_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.5)
 s_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.5)
 
-# WGAN-GP Loss
 def gradient_penalty(real_data, fake_data, discriminator):
     batch_size = tf.shape(real_data)[0]
     real_data = tf.cast(real_data, tf.float32)
@@ -143,7 +131,6 @@ def gradient_penalty(real_data, fake_data, discriminator):
     gp = tf.reduce_mean((norm - 1.0) ** 2)
     return gp
 
-# Training step
 @tf.function
 def train_step(real_data):
     real_data = tf.cast(real_data, tf.float32)
@@ -183,7 +170,6 @@ def train_step(real_data):
     
     return d_loss, g_loss, fake_data
 
-# Training loop
 dataset = tf.data.Dataset.from_tensor_slices(X).shuffle(1000).batch(batch_size)
 for iteration in range(iterations):
     d_loss_total = 0.0
@@ -202,7 +188,6 @@ for iteration in range(iterations):
         if fake_variance < 1e-6:
             print("Warning: Low fake data variance detected")
 
-# Generate synthetic data
 noise = tf.random.normal([n_sequences, seq_len, n_features], dtype=tf.float32)
 synthetic_data = generator(noise, training=False).numpy()
 print(f"Synthetic data variance: {np.var(synthetic_data):.6f}")
@@ -223,7 +208,6 @@ for _ in range(n_sequences):
     synthetic_ar_sequences.append(synthetic_seq)
 synthetic_ar_sequences = np.array(synthetic_ar_sequences).reshape(-1, seq_len, 1)
 
-# Compute evaluation metrics
 def compute_metrics(real_seqs, synthetic_seqs, lag=10):
     real_flat = real_seqs.reshape(-1)
     synthetic_flat = np.clip(synthetic_seqs.reshape(-1), -1, 1)
@@ -246,7 +230,6 @@ def compute_metrics(real_seqs, synthetic_seqs, lag=10):
     
     return ks_stat, skew_diff, kurt_diff, acf_mse
 
-# Compute metrics
 real_sequences = X
 tbcgan_metrics = compute_metrics(real_sequences, synthetic_data)
 ar_metrics = compute_metrics(real_sequences, synthetic_ar_sequences)
