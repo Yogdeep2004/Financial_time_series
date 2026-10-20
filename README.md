@@ -136,9 +136,6 @@ Not in this file yet:
 - Data augmentation for models trained on scarce market data
 - Strategy evaluation on paths the strategy has not been fitted to
 
-## Related
-
-[volatility-insights](https://github.com/Yogdeep2004/volatility-insights) is a companion dashboard that walks through the architecture and the model comparison.
 
 ---
 
